@@ -8,6 +8,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Scanner;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -16,10 +17,16 @@ public class Server {
             "/styles.css", "/app.js", "/links.html", "/forms.html", "/classic.html", "/events.html", "/events.js");
 
     public static void main(String[] args) {
+        listen();
+    }
+
+    private static void listen() {
         final ExecutorService threadPool = Executors.newFixedThreadPool(64);
         try (final var serverSocket = new ServerSocket(9999)) {
-            while (true) {
+            while (!Thread.currentThread().isInterrupted()) {
                 try {
+                    /* Закрытие сокета выносим отсюда в тред-обработчик из тредпула. Иначе запущенный тред
+                    в тредпуле даже не успеет начать обработку, а socket уже будет закрыт в этом треде */
                     final var socket = serverSocket.accept();
                     threadPool.execute(() -> processClientRequests(socket));
                 } catch (IOException e) {
@@ -28,6 +35,8 @@ public class Server {
             }
         } catch (IOException e) {
             e.printStackTrace();
+        } finally {
+            threadPool.shutdown();
         }
     }
 
