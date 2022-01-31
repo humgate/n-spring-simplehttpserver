@@ -1,26 +1,18 @@
-import java.io.BufferedOutputStream;
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Scanner;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class Server {
-    final static List<String> validPaths = List.of("/index.html", "/spring.svg", "/spring.png", "/resources.html",
-            "/styles.css", "/app.js", "/links.html", "/forms.html", "/classic.html", "/events.html", "/events.js");
+    static final String PUBLIC_FOLDER = "public";
+    static final List<String> validPaths = initServerPaths();
 
     public static void main(String[] args) {
-        listen();
-    }
-
-    private static void listen() {
         final ExecutorService threadPool = Executors.newFixedThreadPool(64);
         try (final var serverSocket = new ServerSocket(9999)) {
             while (!Thread.currentThread().isInterrupted()) {
@@ -38,6 +30,12 @@ public class Server {
         } finally {
             threadPool.shutdown();
         }
+    }
+
+    private static List<String> initServerPaths() {
+        List<String> validPaths = Arrays.asList((Objects.requireNonNull(new File(Server.PUBLIC_FOLDER).list())));
+        validPaths.replaceAll(s -> "/"+ s);
+        return validPaths;
     }
 
     public static void processClientRequests(Socket socket) {
@@ -68,7 +66,7 @@ public class Server {
                 return;
             }
 
-            final var filePath = Path.of(".", "public", path);
+            final var filePath = Path.of(".", PUBLIC_FOLDER, path);
             final var mimeType = Files.probeContentType(filePath);
 
             // special case for classic
