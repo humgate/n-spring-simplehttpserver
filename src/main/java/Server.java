@@ -12,6 +12,37 @@ public class Server {
     static final String PUBLIC_FOLDER = "public";
     static final int THREAD_POOL_THREADS = 64;
     static final List<String> validPaths = initServerPaths();
+    static Map<String, Handler> handlerMap = new HashMap<>();
+
+    public void addHandler(Method method, String path, Handler handler) {
+        handlerMap.put(method + path, handler);
+    }
+
+    public static Request parseRequest (String strRequest) {
+        // read only request line for simplicity
+        // must be in form GET /path HTTP/1.1
+        final var parts = strRequest.split(" ");
+
+        if (parts.length != 3) {
+            // incorrect request
+            return null;
+        }
+
+        Method method;
+         try {
+             method = Enum.valueOf(Method.class,parts[0]);
+         } catch (IllegalArgumentException e) {
+             // incorrect request;
+             return null;
+         }
+
+         String path = parts[1];
+         if (path ==null) {
+             // incorrect request;
+             return null;
+         }
+        return new Request(method,path,null,new byte[0]);
+    }
 
     public void listen(short port) {
         final ExecutorService threadPool = Executors.newFixedThreadPool(THREAD_POOL_THREADS);
@@ -52,23 +83,23 @@ public class Server {
      *
      * @param socket - accepted client socket
      */
-    public static void processClientRequests(Socket socket) {
+    private static void processClientRequests(Socket socket) {
         try (final var in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
              final var out = new BufferedOutputStream(socket.getOutputStream())) {
 
             // read only request line for simplicity
             // must be in form GET /path HTTP/1.1
             final var requestLine = in.readLine();
-            final var parts = requestLine.split(" ");
 
-            if (parts.length != 3) {
+            //parse String to Request
+            Request request = parseRequest(requestLine);
+            if (request == null) {
                 // just close socket
                 socket.close();
                 return;
             }
 
-            final var path = parts[1];
-            if (!validPaths.contains(path)) {
+            if (!validPaths.contains(request.getPath())) {
                 out.write((
                         "HTTP/1.1 404 Not Found\r\n" +
                                 "Content-Length: 0\r\n" +
@@ -80,11 +111,11 @@ public class Server {
                 return;
             }
 
-            final var filePath = Path.of(".", PUBLIC_FOLDER, path);
+            final var filePath = Path.of(".", PUBLIC_FOLDER, request.getPath());
             final var mimeType = Files.probeContentType(filePath);
 
             // special case for classic
-            if (path.equals("/classic.html")) {
+            if (request.getPath().equals("/classic.html")) {
                 final var template = Files.readString(filePath);
                 final var content = template.replace(
                         "{time}",
