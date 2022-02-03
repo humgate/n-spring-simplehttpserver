@@ -12,10 +12,12 @@ public class Server {
     static final String PUBLIC_FOLDER = "public";
     static final int THREAD_POOL_THREADS = 64;
     static final List<String> validPaths = initServerPaths();
-    static Map<String, Handler> handlerMap = new HashMap<>();
+    static Map<Method,Map<String, Handler>> handlerMap = new HashMap<>();
 
     public void addHandler(Method method, String path, Handler handler) {
-        handlerMap.put(method + path, handler);
+        Map<String, Handler> innerMap = new HashMap<>();
+        innerMap.put(path, handler);
+        handlerMap.put(method, innerMap);
     }
 
     public static Request parseRequest (String strRequest) {
@@ -41,6 +43,7 @@ public class Server {
              // incorrect request;
              return null;
          }
+
         return new Request(method,path,null,new byte[0]);
     }
 
@@ -99,7 +102,10 @@ public class Server {
                 return;
             }
 
-            if (!validPaths.contains(request.getPath())) {
+            Handler handler = handlerMap.get(request.getMethod()).get(request.getPath());
+
+            if (handler == null) {
+                //no handlers registered
                 out.write((
                         "HTTP/1.1 404 Not Found\r\n" +
                                 "Content-Length: 0\r\n" +
@@ -111,39 +117,7 @@ public class Server {
                 return;
             }
 
-            final var filePath = Path.of(".", PUBLIC_FOLDER, request.getPath());
-            final var mimeType = Files.probeContentType(filePath);
-
-            // special case for classic
-            if (request.getPath().equals("/classic.html")) {
-                final var template = Files.readString(filePath);
-                final var content = template.replace(
-                        "{time}",
-                        LocalDateTime.now().toString()
-                ).getBytes();
-                out.write((
-                        "HTTP/1.1 200 OK\r\n" +
-                                "Content-Type: " + mimeType + "\r\n" +
-                                "Content-Length: " + content.length + "\r\n" +
-                                "Connection: close\r\n" +
-                                "\r\n"
-                ).getBytes());
-                out.write(content);
-                out.flush();
-                socket.close();
-                return;
-            }
-
-            final var length = Files.size(filePath);
-            out.write((
-                    "HTTP/1.1 200 OK\r\n" +
-                            "Content-Type: " + mimeType + "\r\n" +
-                            "Content-Length: " + length + "\r\n" +
-                            "Connection: close\r\n" +
-                            "\r\n"
-            ).getBytes());
-            Files.copy(filePath, out);
-            out.flush();
+            handler.handle(request,out);
             socket.close();
         } catch (IOException e) {
             e.printStackTrace();
