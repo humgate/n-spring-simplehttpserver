@@ -4,6 +4,16 @@ import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
 
+/**
+ * Server demo class. Registers two handlers and launches listening.
+ * The first handler is specific full-path handler, it triggers only when client request exactly
+ * for path specified in handler path (relatively to PUBLIC_FOLDER).
+ * The second handler is "common" which means it is only seeked for if no full-path handlers found
+ * for request path, and it handles all request paths whose parent folder is specified in handler path.
+ * In this example "common" handler will handle all requests for resources located in PUBLIC_FOLDER
+ * except classic.html, which is handled by specific full-path handler
+ *
+ */
 public class Main {
     static final short SERVER_PORT = 9999;
     static final String PUBLIC_FOLDER = "public";
@@ -16,10 +26,12 @@ public class Main {
             try {
                 final var filePath = Path.of(".", PUBLIC_FOLDER, r.getPath());
                 final var mimeType = Files.probeContentType(filePath);
-                final var template = Files.readString(Path.of(r.getPath()));
+                final var template = Files.readString(filePath);
+                System.out.println(template);
                 final var content = template.replace("{time}",LocalDateTime.now().
                         toString()).getBytes();
                 o.write(Server.buildResponseStatusHeadersOnOK(mimeType, content.length).getBytes());
+                o.write(content);
                 o.flush();
             } catch (InvalidPathException | IOException e) {
                 e.printStackTrace();
