@@ -9,7 +9,7 @@ import java.util.concurrent.Executors;
 public class Server {
     static final int THREAD_POOL_THREADS = 64;
     //handlers collection
-    static Map<Method,Map<String, Handler>> handlerMap = new HashMap<>();
+    public static Map<Method,Map<String, Handler>> handlerMap = new HashMap<>();
 
     /**
      * Handler adder
@@ -19,9 +19,18 @@ public class Server {
      * @param handler - handler object
      */
     public void addHandler(Method method, String path, Handler handler) {
-        Map<String, Handler> innerMap = new HashMap<>();
-        innerMap.put(path, handler);
-        handlerMap.put(method, innerMap);
+        //outer (method) map exists so inner map exits as well
+        if (handlerMap.containsKey(method)) {
+            //add inner (path) map element
+            handlerMap.get(method).put(path, handler);
+        } else {
+            //create new inner map
+            Map<String, Handler> innerMap = new HashMap<>();
+            //add inner (path) map element
+            innerMap.put(path, handler);
+            //add outer (method) map element
+            handlerMap.put(method, innerMap);
+        }
     }
 
     /**
