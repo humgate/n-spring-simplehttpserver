@@ -2,6 +2,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
+import java.time.LocalDateTime;
 
 public class Main {
     static final short SERVER_PORT = 9999;
@@ -32,7 +33,20 @@ public class Main {
         });
 
         //Custom exact match handler for PUBLIC_FOLDER/
-        server.addHandler(Method.GET, "\\", (r, o) -> {
+        server.addHandler(Method.GET, "/classic.html", (r, o) -> {
+                final var template = Files.readString(r.getPath());
+                final var content = template.replace(
+                        "{time}",
+                        LocalDateTime.now().toString()
+                ).getBytes();
+                out.write((
+                        "HTTP/1.1 200 OK\r\n" +
+                                "Content-Type: " + mimeType + "\r\n" +
+                                "Content-Length: " + content.length + "\r\n" +
+                                "Connection: close\r\n" +
+                                "\r\n"
+                ).getBytes());
+
             try {
                 final Path filePath = Path.of(".", PUBLIC_FOLDER, r.getPath());
                 final String mimeType = Files.probeContentType(filePath);
