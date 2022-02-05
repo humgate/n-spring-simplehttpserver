@@ -1,10 +1,13 @@
-import java.net.URI;
 import java.util.List;
 
 public class Request {
+    //method
     private Method method;
+    //path without query string
     private String path;
+    //headers
     private List<String> headers;
+    //body
     private byte[] body;
 
     public Request(Method method, String path, List<String> headers, byte[] body) {

@@ -7,6 +7,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class Server {
+    //http request max length accepted by the server
+    static final short REQUEST_LENGTH_LIMIT=4096;
+    //threadPool threads amount to process client requests
     static final int THREAD_POOL_THREADS = 64;
     //handlers collection
     public static Map<Method,Map<String, Handler>> handlerMap = new HashMap<>();
@@ -95,15 +98,11 @@ public class Server {
      * @param socket - accepted client socket
      */
     private static void processClientRequests(Socket socket) {
-        try (final var in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+        try (final var in = new BufferedInputStream(socket.getInputStream());
              final var out = new BufferedOutputStream(socket.getOutputStream())) {
 
-            // read only request line for simplicity
-            // must be in form GET /path HTTP/1.1
-            final var requestLine = in.readLine();
-
-            //parse String to Request
-            Request request = parseRequest(requestLine);
+            // read request string into Request object
+            Request request = readRequest(in);
             if (request == null) {
                 // just close socket
                 socket.close();
@@ -139,6 +138,82 @@ public class Server {
         }
     }
 
+    private static Request readRequest (BufferedInputStream in) {
+        try {
+            in.mark(REQUEST_LENGTH_LIMIT);
+            final var buffer = new byte[REQUEST_LENGTH_LIMIT];
+            final var read = in.read(buffer);
+
+            // ищем request line
+            final var requestLineDelimiter = new byte[]{'\r', '\n'};
+            final var requestLineEnd = indexOf(buffer, requestLineDelimiter, 0, read);
+            if (requestLineEnd == -1) {
+                return null;
+            }
+
+            // читаем request line
+            final var requestLine = new String(Arrays.copyOf(buffer, requestLineEnd)).split(" ");
+            if (requestLine.length != 3) {
+                return null;
+            }
+
+            final Method method;
+            try {
+                method = Enum.valueOf(Method.class,requestLine[0]);
+            } catch (IllegalArgumentException e) {
+                // bad request;
+                return null;
+            }
+            System.out.println(method);
+
+            final var path = requestLine[1];
+            if (!path.startsWith("/")) {
+                // bad request;
+                return null;
+            }
+            System.out.println(path);
+
+            // ищем заголовки
+            final var headersDelimiter = new byte[]{'\r', '\n', '\r', '\n'};
+            final var headersStart = requestLineEnd + requestLineDelimiter.length;
+            final var headersEnd = indexOf(buffer, headersDelimiter, headersStart, read);
+            if (headersEnd == -1) {
+                // bad request;
+                return null;
+            }
+
+            // отматываем на начало буфера
+            in.reset();
+            // пропускаем requestLine
+            in.skip(headersStart);
+
+            final var headersBytes = in.readNBytes(headersEnd - headersStart);
+            final var headers = Arrays.asList(new String(headersBytes).split("\r\n"));
+            System.out.println(headers);
+
+            // определяем тело, для GET тела нет
+            byte[] bodyBytes = new byte[];
+            if (!method.equals(Method.GET)) {
+                in.skip(headersDelimiter.length);
+                // вычитываем Content-Length, чтобы прочитать body
+                final var contentLength = extractHeader(headers, "Content-Length");
+                if (contentLength.isPresent()) {
+                    final var length = Integer.parseInt(contentLength.get());
+                    bodyBytes = in.readNBytes(length);
+                    final var body = new String(bodyBytes);
+                    System.out.println(body);
+                }
+            }
+
+           return new Request(method, path,headers,bodyBytes);
+
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        }
+        return new Request();
+    }
+
     /**
      * Builds response status line and headers for OK status
      * @param mimeType - mimetype of response body
@@ -162,6 +237,39 @@ public class Server {
                 "Content-Length: 0\r\n" +
                 "Connection: close\r\n" +
                 "\r\n";
+    }
+
+    /**
+     * Builds response status line and headers for "Bad Request" status
+     * @return - response status line and headers
+     */
+    public static String buildResponseStatusHeadersOnBad() {
+        return  "HTTP/1.1 40O Bad Request\r\n" +
+                "Content-Length: 0\r\n" +
+                "Connection: close\r\n" +
+                "\r\n";
+    }
+
+    private static Optional<String> extractHeader(List<String> headers, String header) {
+        return headers.stream()
+                .filter(o -> o.startsWith(header))
+                .map(o -> o.substring(o.indexOf(" ")))
+                .map(String::trim)
+                .findFirst();
+    }
+
+    // from google guava with modifications
+    private static int indexOf(byte[] array, byte[] target, int start, int max) {
+        outer:
+        for (int i = start; i < max - target.length + 1; i++) {
+            for (int j = 0; j < target.length; j++) {
+                if (array[i + j] != target[j]) {
+                    continue outer;
+                }
+            }
+            return i;
+        }
+        return -1;
     }
 }
 
