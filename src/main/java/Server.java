@@ -37,6 +37,7 @@ public class Server {
     }
 
     /**
+     * DEPRECATED
      * Parses Request string to Request object. Read only request line for simplicity.
      * String must be in form GET /path HTTP/1.1
      * @param strRequest - input string
@@ -63,7 +64,6 @@ public class Server {
              // incorrect request;
              return null;
          }
-
         return new Request(method,path,null,new byte[0]);
     }
 
@@ -138,20 +138,25 @@ public class Server {
         }
     }
 
+    /**
+     * reads http request from input stream validates it and places into thr Request object
+     * @param in - BufferedInputStream of client socket
+     * @return Request object if parsing was ok or null if not (bad request)
+     */
     private static Request readRequest (BufferedInputStream in) {
         try {
             in.mark(REQUEST_LENGTH_LIMIT);
             final var buffer = new byte[REQUEST_LENGTH_LIMIT];
             final var read = in.read(buffer);
 
-            // ищем request line
+            // look for request line end
             final var requestLineDelimiter = new byte[]{'\r', '\n'};
             final var requestLineEnd = indexOf(buffer, requestLineDelimiter, 0, read);
             if (requestLineEnd == -1) {
                 return null;
             }
 
-            // читаем request line
+            // read request line
             final var requestLine = new String(Arrays.copyOf(buffer, requestLineEnd)).split(" ");
             if (requestLine.length != 3) {
                 return null;
@@ -192,7 +197,7 @@ public class Server {
             System.out.println(headers);
 
             // определяем тело, для GET тела нет
-            byte[] bodyBytes = new byte[];
+            byte[] bodyBytes = new byte[0];
             if (!method.equals(Method.GET)) {
                 in.skip(headersDelimiter.length);
                 // вычитываем Content-Length, чтобы прочитать body
@@ -205,13 +210,11 @@ public class Server {
                 }
             }
 
-           return new Request(method, path,headers,bodyBytes);
-
+            return new Request(method, path, headers, bodyBytes);
         } catch (IOException e) {
             e.printStackTrace();
             return null;
         }
-        return new Request();
     }
 
     /**
