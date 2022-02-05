@@ -1,14 +1,19 @@
+import org.apache.http.NameValuePair;
+import org.apache.http.client.utils.URLEncodedUtils;
+
+import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Optional;
 
 public class Request {
     //method
-    private Method method;
+    private final Method method;
     //path without query string
-    private String path;
+    private final String path;
     //headers
-    private List<String> headers;
+    private final List<String> headers;
     //body
-    private byte[] body;
+    private final byte[] body;
 
     public Request(Method method, String path, List<String> headers, byte[] body) {
         this.method = method;
@@ -31,5 +36,15 @@ public class Request {
 
     public byte[] getBody() {
         return body;
+    }
+
+    public String getQueryParam(String name) {
+        Optional<NameValuePair> nameValuePair =
+                URLEncodedUtils.parse(path, StandardCharsets.UTF_8)
+                .stream()
+                .filter((n)-> n.getName().equals(name))
+                .findFirst();
+
+        return nameValuePair.map(NameValuePair::getValue).orElse(null);
     }
 }
