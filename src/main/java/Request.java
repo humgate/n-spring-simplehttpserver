@@ -76,5 +76,7 @@ public class Request {
                 .findFirst();
     }
 
-
+    public String getPathWithoutQueryString() {
+        return (path.indexOf('?') != -1) ? path.substring(0,path.indexOf('?')) : path;
+    }
 }
