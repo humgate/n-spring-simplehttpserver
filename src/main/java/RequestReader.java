@@ -14,6 +14,8 @@ public class RequestReader {
             final var buffer = new byte[requestLengthLimit];
             final var read = in.read(buffer);
 
+            final String url = new String(Arrays.copyOf(buffer,read));
+
             // look for request line end
             final var requestLineDelimiter = new byte[]{'\r', '\n'};
             final var requestLineEnd = indexOf(buffer, requestLineDelimiter, 0, read);

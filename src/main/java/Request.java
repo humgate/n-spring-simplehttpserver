@@ -1,6 +1,7 @@
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;
-
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Optional;
@@ -43,13 +44,12 @@ public class Request {
      * @param name - parameter name
      * @return - parameter value if such parameter name exists in query string, otherwise null
      */
-    public String getQueryParam(String name) {
+    public String getQueryParam(String name) throws URISyntaxException {
         Optional<NameValuePair> nameValuePair =
-                URLEncodedUtils.parse(path, StandardCharsets.UTF_8)
+                URLEncodedUtils.parse(new URI(path), StandardCharsets.UTF_8)
                 .stream()
                 .filter((n)-> n.getName().equals(name))
                 .findFirst();
-
         return nameValuePair.map(NameValuePair::getValue).orElse(null);
     }
 

@@ -1,6 +1,7 @@
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
@@ -91,7 +92,7 @@ public class Server {
             System.out.println("request path: " + request.getPathWithoutQueryString());
 
             //if exact match not found, and path is not root /, try to find handler by parent path to request path
-            if (handler == null && !request.getPathWithoutQueryString().equals("/")) {
+            if (handler == null) {
                 System.out.println("handler not found for exact request path");
                 Path parent = Path.of(request.getPathWithoutQueryString()).getParent();
                 System.out.println("parent path: " + parent);
