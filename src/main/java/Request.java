@@ -8,7 +8,7 @@ import java.util.Optional;
 public class Request {
     //method
     private final Method method;
-    //path without query string
+    //path (full, with query string)
     private final String path;
     //headers
     private final List<String> headers;
@@ -38,6 +38,11 @@ public class Request {
         return body;
     }
 
+    /**
+     * Gets query string parameter value with given parameter name
+     * @param name - parameter name
+     * @return - parameter value if such parameter name exists in query string, otherwise null
+     */
     public String getQueryParam(String name) {
         Optional<NameValuePair> nameValuePair =
                 URLEncodedUtils.parse(path, StandardCharsets.UTF_8)
@@ -47,4 +52,29 @@ public class Request {
 
         return nameValuePair.map(NameValuePair::getValue).orElse(null);
     }
+
+    /**
+     * Tests if there is such header in request headers collection
+     * @param header - header to test
+     * @return true if exists otherwise - false
+     */
+    public boolean headerExists (String header) {
+        return getHeaders().contains(header);
+    }
+
+    /**
+     * Extracts header value form the header with given name
+     * @param headers headers collection (without ending \n\r)
+     * @param header header name to search for (without ending \n\r)
+     * @return header value
+     */
+    public static Optional<String> extractHeader(List<String> headers, String header) {
+        return headers.stream()
+                .filter(o -> o.startsWith(header))
+                .map(o -> o.substring(o.indexOf(" ")))
+                .map(String::trim)
+                .findFirst();
+    }
+
+
 }

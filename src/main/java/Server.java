@@ -37,37 +37,6 @@ public class Server {
     }
 
     /**
-     * DEPRECATED
-     * Parses Request string to Request object. Read only request line for simplicity.
-     * String must be in form GET /path HTTP/1.1
-     * @param strRequest - input string
-     * @return - Request objects if parsed ok and null if not
-     */
-    public static Request parseRequest (String strRequest) {
-        final var parts = strRequest.split(" ");
-
-        if (parts.length != 3) {
-            // incorrect request
-            return null;
-        }
-
-        Method method;
-         try {
-             method = Enum.valueOf(Method.class,parts[0]);
-         } catch (IllegalArgumentException e) {
-             // incorrect request;
-             return null;
-         }
-
-         String path = parts[1];
-         if (path ==null) {
-             // incorrect request;
-             return null;
-         }
-        return new Request(method,path,null,new byte[0]);
-    }
-
-    /**
      * Initiate server listening operation for given port.
      * Listening is cycle of waiting for new client connections and launching received request handling
      * in new thread (in threadPool) upon connection
@@ -81,7 +50,11 @@ public class Server {
                    /* Remove Socket closure from here to the threadPool thread, otherwise threadPool thread
                     * will get already closed socket */
                     final var socket = serverSocket.accept();
-                    threadPool.execute(() -> processClientRequests(socket));
+                    threadPool.execute(() -> {
+                        while (!socket.isClosed()) {
+                            processClientRequest(socket);
+                        }
+                    });
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -97,7 +70,7 @@ public class Server {
      * Processes client request and closes the socket
      * @param socket - accepted client socket
      */
-    private static void processClientRequests(Socket socket) {
+    private static void processClientRequest(Socket socket) {
         try (final var in = new BufferedInputStream(socket.getInputStream());
              final var out = new BufferedOutputStream(socket.getOutputStream())) {
 
@@ -105,6 +78,7 @@ public class Server {
             Request request = readRequest(in);
             if (request == null) {
                 // just close socket
+                System.out.println("closing socket");
                 socket.close();
                 return;
             }
@@ -123,7 +97,7 @@ public class Server {
                 handler = handlerMap.get(request.getMethod()).get(parent.toString());
                 if (handler == null) {
                     System.out.println("handler not found for request parent path");
-                    out.write(buildResponseStatusHeadersOnFail().getBytes());
+                    out.write(buildResponseStatusHeadersOnFail(true).getBytes());
                     out.flush();
                     socket.close();
                     return;
@@ -131,17 +105,22 @@ public class Server {
             }
 
             //handler found, have it to process the request
+            System.out.println("handler found, handling...\n");
             handler.handle(request,out);
-            socket.close();
+
+            //do not close the connection if client requested so with "Connection: keep-alive" header
+            if  (!request.headerExists("Connection: keep-alive")) {
+                socket.close();
+            }
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
     /**
-     * reads http request from input stream validates it and places into thr Request object
+     * Reads http request from input stream, validates it and returns it as the Request object
      * @param in - BufferedInputStream of client socket
-     * @return Request object if parsing was ok or null if not (bad request)
+     * @return Request object if reading/parsing was ok, null if not (bad request)
      */
     private static Request readRequest (BufferedInputStream in) {
         try {
@@ -201,7 +180,7 @@ public class Server {
             if (!method.equals(Method.GET)) {
                 in.skip(headersDelimiter.length);
                 // вычитываем Content-Length, чтобы прочитать body
-                final var contentLength = extractHeader(headers, "Content-Length");
+                final var contentLength = Request.extractHeader(headers, "Content-Length");
                 if (contentLength.isPresent()) {
                     final var length = Integer.parseInt(contentLength.get());
                     bodyBytes = in.readNBytes(length);
@@ -223,23 +202,21 @@ public class Server {
      * @param length - respince body length
      * @return - response status line and headers
      */
-    public static String buildResponseStatusHeadersOnOK(String mimeType, long length) {
+    public static String buildResponseStatusHeadersOnOK(String mimeType, long length, boolean connClose) {
         return "HTTP/1.1 200 OK\r\n" +
                 "Content-Type: " + mimeType + "\r\n" +
                 "Content-Length: " + length + "\r\n" +
-                "Connection: close\r\n" +
-                "\r\n";
+                (connClose ? "Connection: close\r\n\r\n":"\r\n");
     }
 
     /**
      * Builds response status line and headers for "Not found" status
      * @return - response status line and headers
      */
-    public static String buildResponseStatusHeadersOnFail() {
+    public static String buildResponseStatusHeadersOnFail(boolean connClose) {
         return  "HTTP/1.1 404 Not Found\r\n" +
                 "Content-Length: 0\r\n" +
-                "Connection: close\r\n" +
-                "\r\n";
+                (connClose ? "Connection: close\r\n\r\n":"\r\n");
     }
 
     /**
@@ -251,14 +228,6 @@ public class Server {
                 "Content-Length: 0\r\n" +
                 "Connection: close\r\n" +
                 "\r\n";
-    }
-
-    private static Optional<String> extractHeader(List<String> headers, String header) {
-        return headers.stream()
-                .filter(o -> o.startsWith(header))
-                .map(o -> o.substring(o.indexOf(" ")))
-                .map(String::trim)
-                .findFirst();
     }
 
     // from google guava with modifications

@@ -6,7 +6,7 @@ import java.time.LocalDateTime;
 
 /**
  * Server demo class. Registers two handlers and launches listening.
- * The first handler is specific full-path handler, it triggers only when client request exactly
+ * The first handler is specific full-path handler, it triggers only when client requests exactly
  * for path specified in handler path (relatively to PUBLIC_FOLDER).
  * The second handler is "common" which means it is only seeked for if no full-path handlers found
  * for request path, and it handles all request paths whose parent folder is specified in handler path.
@@ -30,14 +30,16 @@ public class Main {
                 System.out.println(template);
                 final var content = template.replace("{time}",LocalDateTime.now().
                         toString()).getBytes();
-                o.write(Server.buildResponseStatusHeadersOnOK(mimeType, content.length).getBytes());
+                o.write(Server.buildResponseStatusHeadersOnOK(
+                        mimeType, content.length, !r.headerExists("Connection: keep-alive")).getBytes());
                 o.write(content);
                 o.flush();
             } catch (InvalidPathException | IOException e) {
                 e.printStackTrace();
                 //Not found. Respond with 404
                 try {
-                    o.write(Server.buildResponseStatusHeadersOnFail().getBytes());
+                    o.write(Server.buildResponseStatusHeadersOnFail(
+                            !r.headerExists("Connection: keep-alive")).getBytes());
                     o.flush();
                 } catch (IOException ex) {
                     ex.printStackTrace();
@@ -51,14 +53,16 @@ public class Main {
                 final Path filePath = Path.of(".", PUBLIC_FOLDER, r.getPath());
                 final String mimeType = Files.probeContentType(filePath);
                 final var length = Files.size(filePath);
-                o.write(Server.buildResponseStatusHeadersOnOK(mimeType, length).getBytes());
+                o.write(Server.buildResponseStatusHeadersOnOK(
+                        mimeType, length, !r.headerExists("Connection: keep-alive")).getBytes());
                 Files.copy(filePath, o);
                 o.flush();
             } catch (InvalidPathException | IOException e) {
               e.printStackTrace();
                 //Not found. Respond with 404
                 try {
-                    o.write(Server.buildResponseStatusHeadersOnFail().getBytes());
+                    o.write(Server.buildResponseStatusHeadersOnFail(
+                            !r.headerExists("Connection: keep-alive")).getBytes());
                     o.flush();
                 } catch (IOException ex) {
                     ex.printStackTrace();
