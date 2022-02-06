@@ -9,8 +9,8 @@ Homework "Домашнее задание к занятию «HTTP и совре
 "Handlers*" - see in the feature/handlers branch. Also placed in [pull request](https://github.com/humgate/n-spring-simplehttpserver/pull/1).
 
 Homework "Домашнее задание к занятию «1.2. Формы и форматы передачи данных»" task 1
-"query" - see in the feature/query. 
+"query" - see in the feature/query. Also placed in [pull request](https://github.com/humgate/n-spring-simplehttpserver/pull/2)
 
 #### Homeworks still in work, please ignore for now:
 Homework "Домашнее задание к занятию «1.2. Формы и форматы передачи данных»" task 2
-"x-www-form-urlencoded*". 
+"x-www-form-urlencoded*".  

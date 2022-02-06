@@ -50,10 +50,10 @@ public class Server {
         try (final var serverSocket = new ServerSocket(port)) {
             while (!Thread.currentThread().isInterrupted()) {
                 try {
-                   /* Remove Socket closure from here to the threadPool thread, otherwise threadPool thread
-                    * will get already closed socket */
                     final var socket = serverSocket.accept();
                     threadPool.execute(() -> {
+                        /* can process requests without reconnecting each time, requires client
+                         * to send "Connection: keep-alive" header in the Request */
                         while (!socket.isClosed()) {
                             processClientRequest(socket);
                         }
