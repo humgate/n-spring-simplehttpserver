@@ -1,3 +1,5 @@
+import org.apache.http.NameValuePair;
+
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -106,6 +108,16 @@ public class Server {
                     socket.close();
                     return;
                 }
+            }
+            List<NameValuePair> queryParams = request.getQueryParams();
+            if (queryParams != null && !queryParams.isEmpty()) {
+                System.out.print("query params: ");
+                request.getQueryParams().forEach(o -> {
+                    System.out.print(o.getName()+"="+o.getValue()+ "; ");
+                });
+                System.out.print("\n");
+            } else {
+                System.out.print("no query params\n");
             }
 
             //handler found, have it to process the request

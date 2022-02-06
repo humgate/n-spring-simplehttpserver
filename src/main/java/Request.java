@@ -44,13 +44,32 @@ public class Request {
      * @param name - parameter name
      * @return - parameter value if such parameter name exists in query string, otherwise null
      */
-    public String getQueryParam(String name) throws URISyntaxException {
-        Optional<NameValuePair> nameValuePair =
-                URLEncodedUtils.parse(new URI(path), StandardCharsets.UTF_8)
-                .stream()
-                .filter((n)-> n.getName().equals(name))
-                .findFirst();
-        return nameValuePair.map(NameValuePair::getValue).orElse(null);
+    public String getQueryParam(String name) {
+        try {
+            Optional<NameValuePair> nameValuePair =
+                    // URLEncodedUtils.parse(path, StandardCharsets.UTF_8) does not work..so:
+                    URLEncodedUtils.parse(new URI(path), StandardCharsets.UTF_8)
+                            .stream()
+                            .filter((n) -> n.getName().equals(name))
+                            .findFirst();
+            return nameValuePair.map(NameValuePair::getValue).orElse(null);
+        } catch (URISyntaxException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    /**
+     * @return collection of name-value pairs extracted from Request path, null if empty or
+     * in case of an error
+     */
+    public List<NameValuePair> getQueryParams() {
+        try {
+            return URLEncodedUtils.parse(new URI(path), StandardCharsets.UTF_8);
+        } catch (URISyntaxException e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 
     /**
@@ -76,6 +95,9 @@ public class Request {
                 .findFirst();
     }
 
+    /**
+     * @return part of the path from beginning to the first symbol of query string (excluding ?)
+     */
     public String getPathWithoutQueryString() {
         return (path.indexOf('?') != -1) ? path.substring(0,path.indexOf('?')) : path;
     }

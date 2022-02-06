@@ -2,10 +2,14 @@ import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.util.Arrays;
 
+/**
+ * Utility class for reading Requests
+ */
 public class RequestReader {
     /**
      * Reads http request from input stream, validates it and returns it as the Request object
-     * @param in - BufferedInputStream of client socket
+     * @param in BufferedInputStream of client socket
+     * @param requestLengthLimit request length max size
      * @return Request object if reading/parsing was ok, null if not (bad request)
      */
     public static Request readRequest (BufferedInputStream in, short requestLengthLimit) {
@@ -13,8 +17,6 @@ public class RequestReader {
             in.mark(requestLengthLimit);
             final var buffer = new byte[requestLengthLimit];
             final var read = in.read(buffer);
-
-            final String url = new String(Arrays.copyOf(buffer,read));
 
             // look for request line end
             final var requestLineDelimiter = new byte[]{'\r', '\n'};
