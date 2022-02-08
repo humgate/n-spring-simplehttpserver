@@ -6,16 +6,18 @@ import java.util.Arrays;
  * Utility class for reading Requests
  */
 public class RequestReader {
+    //http request max length accepted by the server, moved here from Server according to requirement
+    static final short REQUEST_LENGTH_LIMIT=4096;
+
     /**
      * Reads http request from input stream, validates it and returns it as the Request object
      * @param in BufferedInputStream of client socket
-     * @param requestLengthLimit request length max size
      * @return Request object if reading/parsing was ok, null if not (bad request)
      */
-    public static Request readRequest (BufferedInputStream in, short requestLengthLimit) {
+    public static Request readRequest (BufferedInputStream in) {
         try {
-            in.mark(requestLengthLimit);
-            final var buffer = new byte[requestLengthLimit];
+            in.mark(REQUEST_LENGTH_LIMIT);
+            final var buffer = new byte[REQUEST_LENGTH_LIMIT];
             final var read = in.read(buffer);
 
             // look for request line end

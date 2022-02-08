@@ -10,8 +10,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class Server {
-    //http request max length accepted by the server
-    static final short REQUEST_LENGTH_LIMIT=4096;
     //threadPool threads amount to process client requests
     static final int THREAD_POOL_THREADS = 64;
     //handlers collection
@@ -78,7 +76,7 @@ public class Server {
              final var out = new BufferedOutputStream(socket.getOutputStream())) {
 
             // read request string into Request object
-            Request request = RequestReader.readRequest(in, REQUEST_LENGTH_LIMIT);
+            Request request = RequestReader.readRequest(in);
             if (request == null) {
                 // just close socket
                 System.out.println("closing socket");
