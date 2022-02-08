@@ -5,6 +5,7 @@ import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 public class Request {
     //method
@@ -15,12 +16,16 @@ public class Request {
     private final List<String> headers;
     //body
     private final byte[] body;
+    //parameters
+    private List<NameValuePair> params;
+
 
     public Request(Method method, String path, List<String> headers, byte[] body) {
         this.method = method;
         this.path = path;
         this.headers = headers;
         this.body = body;
+        this.params = parseQueryParams();
     }
 
     public Method getMethod() {
@@ -40,11 +45,11 @@ public class Request {
     }
 
     /**
-     * Gets query string parameter value with given parameter name
+     * Finds the first query string parameter with given name and returns its value
      * @param name - parameter name
      * @return - parameter value if such parameter name exists in query string, otherwise null
      */
-    public String getQueryParam(String name) {
+    public String getFirstQueryParam(String name) {
         try {
             Optional<NameValuePair> nameValuePair =
                     // URLEncodedUtils.parse(path, StandardCharsets.UTF_8) does not work..so:
@@ -60,16 +65,35 @@ public class Request {
     }
 
     /**
+     * Searchers for all query string parameters with given name
+     * @param name - parameter name
+     * @return - list of request parameters with give name
+     */
+    public List<NameValuePair> getQueryParams(String name) {
+                   return params
+                    .stream()
+                    .filter(n -> n.getName().equals(name))
+                    .collect(Collectors.toList());
+    }
+
+    /**
      * @return collection of name-value pairs extracted from Request path, null if empty or
      * in case of an error
      */
-    public List<NameValuePair> getQueryParams() {
+    private List<NameValuePair> parseQueryParams() {
         try {
             return URLEncodedUtils.parse(new URI(path), StandardCharsets.UTF_8);
         } catch (URISyntaxException e) {
             e.printStackTrace();
             return null;
         }
+    }
+
+    /**
+     * @return query parameters collection
+     */
+    public List<NameValuePair> getQueryParams() {
+        return params;
     }
 
     /**

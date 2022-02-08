@@ -113,12 +113,20 @@ public class Server {
             if (queryParams != null && !queryParams.isEmpty()) {
                 System.out.print("query params: ");
                 request.getQueryParams().forEach(o -> {
-                    System.out.print(o.getName()+"="+o.getValue()+ "; ");
+                    System.out.print(o.getName() + "=" + o.getValue() + "; ");
+                });
+                //this is just for easy testing by Grigory
+                System.out.print("\nquery params named: as \"value\": ");
+                request.getQueryParams("value").forEach(o -> {
+                    System.out.print(o.getName() + "=" + o.getValue() + "; ");
+                 //end of just for testing by Grigory section
                 });
                 System.out.print("\n");
             } else {
                 System.out.print("no query params\n");
             }
+
+
 
             //handler found, have it to process the request
             System.out.println("handler found, handling...\n");
